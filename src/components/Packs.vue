@@ -9,73 +9,91 @@
                 <input v-model="newPackDescription" placeholder="Description (optional)"
                     class="input input-bordered w-full mt-2" />
             </div>
-                <div class="join join-vertical w-full" @change="loadPackCards">
-                    <div v-for="pack in allPacks" :key="pack.id"
-                        class="join-item collapse collapse-arrow bg-base-100 border border-base-300">
-                        <input type="radio" name="packs" :value="pack.id" v-model="selectedPack" />
-                        <div class="collapse-title font-semibold flex justify-between items-center">
-                            <span>{{ pack.name }}</span>
-                        </div>
-                        <div class="collapse-content">
-                            <p class="text-sm text-gray-500 mb-2">{{ pack.description }}</p>
-                            <dialog id="pack_modal" class="modal">
-                                <div class="modal-box">
-                                    <form method="dialog">
-                                        <button
-                                            class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-                                    </form>
-                                    <fieldset class="fieldset">
-                                        <legend class="fieldset-legend">Add Card</legend>
-                                        <input v-model="newCardFront" placeholder="Front"
-                                            class="input input-bordered w-full" />
-                                        <input v-model="newCardBack" placeholder="Back"
-                                            class="input input-bordered w-full" />
-                                        <button @click="addCard(pack.id)" onclick="pack_modal.showModal()"
-                                            class="btn btn-sm btn-primary">Add</button>
-                                    </fieldset>
+            <div class="join join-vertical w-full" @change="loadPackCards">
+                <div v-for="pack in allPacks" :key="pack.id"
+                    class="join-item collapse collapse-arrow bg-base-100 border border-base-300">
+                    <input type="radio" name="packs" :value="pack.id" v-model="selectedPack" />
+                    <div class="collapse-title font-semibold flex justify-between items-center">
+                        <span>{{ pack.name }}</span>
+                    </div>
+                    <div class="collapse-content">
+                        <p class="text-sm text-gray-500 mb-2">{{ pack.description }}</p>
+                        <div class="space-y-2">
+                            <div v-for="card in currentPackCards" :key="card.id"
+                                class="flex items-center justify-between p-2 bg-base-100 rounded border border-neutral">
+                                <div>
+                                    <p class="font-medium">{{ card.front }}</p>
+                                    <p class="text-sm">{{ card.back }}</p>
                                 </div>
-                            </dialog>
-                            <dialog id="delete_pack_confirm" class="modal">
-                                <div class="modal-box">
-                                    <form method="dialog">
-                                        <button
-                                            class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-                                    </form>
-                                    <fieldset class="fieldset">
-                                        <legend class="fieldset-legend">Are you sure?</legend>
-                                        <button @click.stop="deletePack(pack.id)" class="btn btn-error">Sure</button>
-                                    </fieldset>
-                                </div>
-                            </dialog>
-                            <div class="space-y-2">
-                                <div v-for="card in currentPackCards" :key="card.id"
-                                    class="flex items-center justify-between p-2 bg-base-100 rounded border border-neutral">
-                                    <div>
-                                        <p class="font-medium">{{ card.front }}</p>
-                                        <p class="text-sm">{{ card.back }}</p>
-                                    </div>
-                                    <button @click="deleteCard(card.id)" class="btn btn-sm btn-circle btn-ghost">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
+                                <button @click="deleteCard(card.id)" class="btn btn-sm btn-circle btn-ghost">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
-                            <button class="btn btn-neutral mt-2 mr-2" onclick="pack_modal.showModal()">Add Card</button>
-                            <button onclick="delete_pack_confirm.showModal()" class="btn btn-error mt-2">Delete
-                                Pack</button>
                         </div>
+                        <button class="btn btn-neutral mt-2 mr-2" @click="showPackModal(pack.id)">Add Card</button>
+                        <button @click="showDeletePackModal(pack.id)" class="btn btn-error mt-2">Delete
+                            Pack</button>
                     </div>
                 </div>
+            </div>
         </div>
     </div>
+    <dialog ref="packModal" class="modal">
+        <div class="modal-box">
+            <form method="dialog">
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            </form>
+            <fieldset class="fieldset">
+                <legend class="fieldset-legend">Add Card</legend>
+                <input v-model="newCardFront" placeholder="Front" class="input input-bordered w-full" />
+                <input v-model="newCardBack" placeholder="Back" class="input input-bordered w-full" />
+                <button @click.prevent="handleAddCard" class="btn btn-sm btn-primary">Add</button>
+            </fieldset>
+        </div>
+    </dialog>
+    <dialog ref="deletePackModal" class="modal">
+        <div class="modal-box">
+            <form method="dialog">
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            </form>
+            <fieldset class="fieldset">
+                <legend class="fieldset-legend">Are you sure?</legend>
+                <button @click.prevent="handleDeletePack"
+                    class="btn btn-error">Sure</button>
+            </fieldset>
+        </div>
+    </dialog>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import Database from '@tauri-apps/plugin-sql';
+
+const currentPackId = ref(null);
+const packModal = ref(null);
+const deletePackModal = ref(null);
+
+const showPackModal = (packID) => {
+    currentPackId.value = packID;
+    packModal.value.showModal();
+};
+
+const showDeletePackModal = (packID) => {
+    currentPackId.value = packID;
+    deletePackModal.value.showModal();
+};
+
+const hidePackModal = () => {
+    packModal.value.close();
+};
+
+const hideDeletePackModal = () => {
+    deletePackModal.value.close();
+};
 
 const db = ref(null);
 const allPacks = ref([]);
@@ -85,6 +103,32 @@ const newPackName = ref('');
 const newPackDescription = ref('');
 const newCardFront = ref('');
 const newCardBack = ref('');
+
+const handleAddCard = async () => {
+    if (!currentPackId.value) {
+        console.error('No pack selected');
+        return;
+    }
+    try {
+        await addCard(currentPackId.value);
+        hidePackModal();
+    } catch (error) {
+        console.error('Error handling card addition:', error);
+    }
+};
+
+const handleDeletePack = async () => {
+    if (!currentPackId.value) {
+        console.error('No pack selected');
+        return;
+    }
+    try {
+        await deletePack(currentPackId.value);
+        hideDeletePackModal();
+    } catch (error) {
+        console.error('Error handling pack deletion:', error);
+    }
+};
 
 const loadAllPacks = async () => {
     try {

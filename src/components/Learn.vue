@@ -15,7 +15,7 @@
                         <span>No cards in this pack</span>
                     </div>
                 </div>
-                <div class="mt-1">
+                <div class="mt-5">
                     <progress class="progress w-56" :value="currentCardNumber" :max="totalCards"></progress>
                 </div>
 
